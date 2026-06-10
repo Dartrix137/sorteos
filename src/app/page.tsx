@@ -5,13 +5,13 @@ import { io, Socket } from 'socket.io-client'
 import { QRCodeSVG } from 'qrcode.react'
 import confetti from 'canvas-confetti'
 import * as XLSX from 'xlsx'
-import SpinWheel from '@/components/SpinWheel'
+import SlotMachine from '@/components/SlotMachine'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/hooks/use-toast'
 
-type View = 'welcome' | 'create-game' | 'organizer' | 'organizer-spinning' | 'participant-form' | 'participant-waiting' | 'spinning' | 'winner'
+type View = 'welcome' | 'create-game' | 'organizer' | 'organizer-spinning' | 'participant-form' | 'participant-waiting' | 'winner'
 
 type Participant = {
   id: string
@@ -130,7 +130,7 @@ export default function Home() {
       setIsSpinning(true)
       setView(prev => {
         if (prev === 'organizer') return 'organizer-spinning'
-        if (prev === 'participant-waiting' || prev === 'participant-form') return 'spinning'
+        // Participants stay on waiting screen - they'll see winner directly
         return prev
       })
     })
@@ -262,8 +262,9 @@ export default function Home() {
           }
         }
         if (data.game.status === 'spinning') {
-          setView('spinning')
+          // Participants stay on waiting screen during spin
           joinGameRoom(id, 'participant')
+          setView('participant-waiting')
           return
         }
         joinGameRoom(id, 'participant')
@@ -644,11 +645,11 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Right: Wheel + Controls */}
+            {/* Right: Slot Machine + Controls */}
             <div className="flex flex-col items-center gap-4">
-              {/* Spin Wheel */}
-              <div className="w-full max-w-[350px] md:max-w-[400px]">
-                <SpinWheel
+              {/* Slot Machine / Balota */}
+              <div className="w-full max-w-lg">
+                <SlotMachine
                   participants={participants.map(p => ({ id: p.id, name: p.name }))}
                   isSpinning={isSpinning}
                   onSpinComplete={handleSpinComplete}
@@ -657,7 +658,7 @@ export default function Home() {
               </div>
 
               {/* Controls */}
-              <div className="w-full space-y-3">
+              <div className="w-full max-w-lg space-y-3">
                 {!spinning ? (
                   <Button
                     onClick={handleStartSpin}
@@ -668,7 +669,7 @@ export default function Home() {
                   </Button>
                 ) : (
                   <div className="w-full py-5 text-center text-lg font-bold text-[#00ff8a] neon-text animate-pulse">
-                    🎰 Girando la ruleta...
+                    🎰 Sorteando...
                   </div>
                 )}
 
@@ -798,32 +799,7 @@ export default function Home() {
     )
   }
 
-  // =================== SPINNING VIEW (for participants) ===================
-  if (view === 'spinning') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-[#0a0a1a] relative overflow-hidden">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-[#8e00ff] opacity-10 rounded-full blur-[120px] animate-pulse" />
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-[#00ff8a] opacity-10 rounded-full blur-[120px] animate-pulse" />
-        </div>
 
-        <div className="relative z-10 text-center max-w-md w-full">
-          <h2 className="text-2xl font-bold gradient-text mb-6 animate-pulse">🎰 Girando la Ruleta...</h2>
-
-          <div className="w-full max-w-[300px] mx-auto mb-6">
-            <SpinWheel
-              participants={participants.map(p => ({ id: p.id, name: p.name }))}
-              isSpinning={true}
-              onSpinComplete={() => {}}
-              winnerId={winnerId}
-            />
-          </div>
-
-          <p className="text-[#8888aa] text-sm">El ganador se revelará en unos segundos...</p>
-        </div>
-      </div>
-    )
-  }
 
   // =================== WINNER VIEW ===================
   if (view === 'winner') {
@@ -835,13 +811,36 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 text-center max-w-md w-full">
-          <div className="neon-glow rounded-2xl p-8 bg-[#111127] border-2 border-[#00ff8a]">
+          {/* Neon flash effect */}
+          <div className="absolute inset-0 bg-[#00ff8a] opacity-0 rounded-2xl" style={{ animation: 'neonFlash 1.5s ease-out forwards' }} />
+
+          <div className="relative neon-glow rounded-2xl p-8 bg-[#111127] border-2 border-[#00ff8a] overflow-hidden">
             <div className="text-5xl mb-4">🏆</div>
             <h2 className="text-lg text-[#8888aa] uppercase tracking-widest mb-2">¡El Ganador Es!</h2>
-            <h1 className="text-4xl md:text-5xl font-bold gradient-text mb-4 animate-float">
+            <h1 
+              className="text-4xl md:text-5xl font-bold gradient-text mb-4"
+              style={{ animation: 'zoomInBounce 1s ease-out forwards' }}
+            >
               {winner?.name || '---'}
             </h1>
             <div className="h-1 w-24 mx-auto bg-gradient-to-r from-[#8e00ff] to-[#00ff8a] rounded-full mb-4" />
+
+            <style>{`
+              @keyframes zoomInBounce {
+                0% { transform: scale(0.2); opacity: 0; }
+                50% { transform: scale(1.3); opacity: 1; }
+                70% { transform: scale(0.85); }
+                100% { transform: scale(1); opacity: 1; }
+              }
+              @keyframes neonFlash {
+                0% { opacity: 0.6; }
+                20% { opacity: 0; }
+                40% { opacity: 0.4; }
+                60% { opacity: 0; }
+                80% { opacity: 0.2; }
+                100% { opacity: 0; }
+              }
+            `}</style>
 
             {role === 'organizer' && (
               <div className="space-y-3 mt-6">
