@@ -11,10 +11,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'PIN must be at least 4 characters' }, { status: 400 })
     }
 
-    // Check if PIN already exists
+    // If PIN already exists, delete the old game (participants cascade)
     const existing = await db.gameSession.findUnique({ where: { pin } })
     if (existing) {
-      return NextResponse.json({ error: 'PIN already in use' }, { status: 400 })
+      await db.gameSession.delete({ where: { pin } })
     }
 
     const game = await db.gameSession.create({
