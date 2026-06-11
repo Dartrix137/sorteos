@@ -53,7 +53,7 @@ cleanup() {
     echo "[Shutdown] Done"
     exit 0
 }
-trap cleanup SIGTERM SIGINT
+trap cleanup TERM INT
 
 echo ""
 echo "=== All services started ==="
