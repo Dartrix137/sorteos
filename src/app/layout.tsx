@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description: "App de Sorteo en tiempo real con ruleta interactiva",
   keywords: ["sorteo", "ruleta", "La Sucursal Digital"],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/favicon.webp",
   },
 };
 

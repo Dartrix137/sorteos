@@ -321,6 +321,18 @@ export default function Home() {
       return
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formEmail.trim())) {
+      setFormError('Ingresa un correo electrónico válido')
+      return
+    }
+
+    const phoneDigits = formWhatsapp.replace(/[\s\-().+]/g, '')
+    if (!/^\d{7,15}$/.test(phoneDigits)) {
+      setFormError('Ingresa un número de WhatsApp válido (solo dígitos, mínimo 7)')
+      return
+    }
+
     setIsLoading(true)
     try {
       const res = await fetch('/api/game/join', {
