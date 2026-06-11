@@ -722,7 +722,7 @@ export default function Home() {
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl md:text-2xl font-bold gradient-text">
-              SORTEO
+              CREASORTEOS - Panel de Control
             </h1>
             <div className="flex items-center gap-2">
               <span className="text-[#8888aa] text-sm">PIN:</span>
