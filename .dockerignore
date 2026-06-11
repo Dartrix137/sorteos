@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# Build outputs
+.next/
+/out/
+/build
+mini-services-dist/
+
+# Database (will be on volume)
+db/
+prisma/db/
+
+# Git
+.git/
+.gitignore
+
+# Dev tools
+.env*
+!.env.production.example
+.DS_Store
+*.log
+*.pid
+
+# Editor
+.vscode/
+.idea/
+.zscripts/dev.pid
+
+# Claude / AI
+.claude/
+.z-ai-config
+skills/
+skills-lock.json
+
+# Misc
+coverage/
+*.tsbuildinfo
+next-env.d.ts
+test
+prompt
+download/
+sorteo-app-resumen.md
