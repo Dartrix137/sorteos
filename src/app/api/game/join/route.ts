@@ -21,9 +21,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Game not found' }, { status: 404 })
     }
 
-    if (game.status !== 'waiting') {
-      return NextResponse.json({ error: 'Game is not accepting new participants' }, { status: 400 })
-    }
+    // Registration stays open regardless of game status (waiting/spinning/finished)
+    // so people can keep joining for a future re-draw even after a winner was picked.
 
     // Check for duplicate email or whatsapp in this game
     const existingEmail = await db.participant.findUnique({

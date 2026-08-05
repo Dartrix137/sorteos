@@ -150,7 +150,10 @@ export default function Home() {
       setIsSpinning(true);
       setView((prev) => {
         if (prev === "organizer") return "organizer-spinning";
-        // Participants stay on waiting screen - they'll see winner directly
+        // A participant still looking at a previous winner moves back to
+        // the waiting screen instead of showing a stale winner name.
+        // Someone mid-registration keeps their form untouched.
+        if (prev === "winner") return "participant-waiting";
         return prev;
       });
     });
@@ -286,16 +289,6 @@ export default function Home() {
       const data = await res.json();
       if (data.game) {
         setGame(data.game);
-        if (data.game.status === "finished" && data.game.participants) {
-          const gameWinner = data.game.participants.find(
-            (p: Participant) => p.isWinner,
-          );
-          if (gameWinner) {
-            setWinner({ id: gameWinner.id, name: gameWinner.name });
-            setView("winner");
-            return;
-          }
-        }
         if (data.game.status === "spinning") {
           // Participants stay on waiting screen during spin
           joinGameRoom(id, "participant");
@@ -1036,6 +1029,13 @@ export default function Home() {
             {role === "organizer" && (
               <div className="space-y-3 mt-6">
                 <Button
+                  onClick={handleStartSpin}
+                  disabled={isLoading || participants.length === 0}
+                  className="w-full py-4 font-bold bg-gradient-to-r from-[#8e00ff] to-[#00ff8a] hover:opacity-90 text-[#0a0a1a] rounded-xl transition-all duration-300 disabled:opacity-50"
+                >
+                  🎲 Sortear de Nuevo
+                </Button>
+                <Button
                   onClick={handleExportExcel}
                   variant="outline"
                   className="w-full py-4 border-[#1a1a3e] text-[#00d9ff] hover:bg-[#0a0a1a] hover:border-[#00d9ff] rounded-xl transition-all"
@@ -1047,7 +1047,7 @@ export default function Home() {
                   variant="outline"
                   className="w-full py-4 border-[#1a1a3e] text-[#ff3366] hover:bg-[#0a0a1a] hover:border-[#ff3366] rounded-xl transition-all"
                 >
-                  🔄 Volver a Iniciar
+                  🔄 Nuevo Sorteo (borra participantes)
                 </Button>
               </div>
             )}
