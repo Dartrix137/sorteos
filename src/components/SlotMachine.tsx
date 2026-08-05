@@ -26,23 +26,22 @@ export default function SlotMachine({ participants, isSpinning, onSpinComplete, 
     }
   }, [isSpinning])
 
-  const getWinnerIndex = useCallback(() => {
-    if (!winnerId) return Math.floor(Math.random() * participants.length)
-    const idx = participants.findIndex(p => p.id === winnerId)
-    return idx >= 0 ? idx : 0
-  }, [winnerId, participants])
-
-  const getRandomNames = useCallback((count: number, excludeWinner = true): string[] => {
+  const getRandomNames = useCallback((count: number): string[] => {
     const names: string[] = []
-    const available = participants.length > 2 ? participants.filter(p => true) : participants
     for (let i = 0; i < count; i++) {
-      const randomIdx = Math.floor(Math.random() * available.length)
-      names.push(available[randomIdx]?.name || '---')
+      const randomIdx = Math.floor(Math.random() * participants.length)
+      names.push(participants[randomIdx]?.name || '---')
     }
     return names
   }, [participants])
 
-  // Start spin animation
+  // Start spin animation.
+  // Only depends on `isSpinning`: participants and winnerId are snapshotted
+  // once below. People registering mid-spin change `participants`'
+  // reference, and depending on it here would re-run this effect, cancel
+  // the in-flight setTimeout in cleanup, and get stuck forever on
+  // "hasSpunRef.current" already being true (never reschedules, never
+  // calls onSpinComplete).
   useEffect(() => {
     if (!isSpinning || hasSpunRef.current || participants.length === 0) return
 
@@ -50,9 +49,16 @@ export default function SlotMachine({ participants, isSpinning, onSpinComplete, 
     setIsAnimating(true)
     setShowWinner(false)
 
-    const winnerIndex = getWinnerIndex()
-    const winner = participants[winnerIndex]
+    // Freeze the participant list and winner for the whole animation.
+    const spinParticipants = participants
+    const winnerIndex = winnerId
+      ? Math.max(0, spinParticipants.findIndex(p => p.id === winnerId))
+      : Math.floor(Math.random() * spinParticipants.length)
+    const winner = spinParticipants[winnerIndex]
     setWinnerName(winner.name)
+
+    const randomName = () =>
+      spinParticipants[Math.floor(Math.random() * spinParticipants.length)]?.name || '---'
 
     // Total iterations: fast at start, slow at end (~5 seconds)
     // We'll use decreasing speed intervals
@@ -65,23 +71,21 @@ export default function SlotMachine({ participants, isSpinning, onSpinComplete, 
 
     const animate = () => {
       const progress = Math.min(elapsed / totalDuration, 1)
-      
+
       // Easing: start fast, end slow (cubic)
       const eased = progress * progress * progress
-      
+
       // Current speed: interpolate from initial to final
       const currentSpeed = initialSpeed + (finalSpeed - initialSpeed) * eased
 
       // Get 3 random names, with the winner potentially in the center near the end
       let names: string[]
-      
+
       if (progress > 0.85) {
         // Near the end, start placing the winner in the center
-        const other1 = participants[Math.floor(Math.random() * participants.length)]?.name || '---'
-        const other2 = participants[Math.floor(Math.random() * participants.length)]?.name || '---'
-        names = [other1, winner.name, other2]
+        names = [randomName(), winner.name, randomName()]
       } else {
-        names = getRandomNames(3)
+        names = [randomName(), randomName(), randomName()]
       }
 
       setDisplayNames(names)
@@ -93,13 +97,13 @@ export default function SlotMachine({ participants, isSpinning, onSpinComplete, 
         animationRef.current = setTimeout(animate, currentSpeed)
       } else {
         // Final frame: show winner in center
-        const other1 = participants.find(p => p.id !== winner.id)
+        const other1 = spinParticipants.find(p => p.id !== winner.id)
         const other1Name = other1?.name || '---'
-        const other2 = participants.find(p => p.id !== winner.id && p.id !== other1?.id)
+        const other2 = spinParticipants.find(p => p.id !== winner.id && p.id !== other1?.id)
         const other2Name = other2?.name || '---'
-        
+
         setDisplayNames([other1Name, winner.name, other2Name])
-        
+
         // Brief pause then show winner effect
         setTimeout(() => {
           setIsAnimating(false)
@@ -119,7 +123,8 @@ export default function SlotMachine({ participants, isSpinning, onSpinComplete, 
         clearTimeout(animationRef.current)
       }
     }
-  }, [isSpinning, participants, winnerId, getWinnerIndex, getRandomNames, onSpinComplete])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSpinning])
 
   // Idle state - show static names
   useEffect(() => {

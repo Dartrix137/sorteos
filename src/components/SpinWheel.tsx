@@ -38,21 +38,21 @@ export default function SpinWheel({ participants, isSpinning, onSpinComplete, wi
     return () => window.removeEventListener('resize', updateSize)
   }, [])
 
-  const getWinnerIndex = useCallback(() => {
-    if (!winnerId) return Math.floor(Math.random() * participants.length)
-    const idx = participants.findIndex(p => p.id === winnerId)
+  const getWinnerIndex = useCallback((list: { id: string; name: string }[]) => {
+    if (!winnerId) return Math.floor(Math.random() * list.length)
+    const idx = list.findIndex(p => p.id === winnerId)
     return idx >= 0 ? idx : 0
-  }, [winnerId, participants])
+  }, [winnerId])
 
   // Draw the wheel
-  const drawWheel = useCallback((ctx: CanvasRenderingContext2D, angle: number, size: number) => {
+  const drawWheel = useCallback((ctx: CanvasRenderingContext2D, angle: number, size: number, list: { id: string; name: string }[]) => {
     const centerX = size / 2
     const centerY = size / 2
     const radius = size / 2 - 15
 
     ctx.clearRect(0, 0, size, size)
 
-    if (participants.length === 0) {
+    if (list.length === 0) {
       ctx.beginPath()
       ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI)
       ctx.fillStyle = '#111127'
@@ -68,7 +68,7 @@ export default function SpinWheel({ participants, isSpinning, onSpinComplete, wi
       return
     }
 
-    const sliceAngle = (2 * Math.PI) / participants.length
+    const sliceAngle = (2 * Math.PI) / list.length
 
     // Draw outer glow
     ctx.save()
@@ -82,7 +82,7 @@ export default function SpinWheel({ participants, isSpinning, onSpinComplete, wi
     ctx.restore()
 
     // Draw slices
-    participants.forEach((participant, i) => {
+    list.forEach((participant, i) => {
       const startAngle = angle + i * sliceAngle
       const endAngle = startAngle + sliceAngle
 
@@ -105,7 +105,7 @@ export default function SpinWheel({ participants, isSpinning, onSpinComplete, wi
       ctx.rotate(startAngle + sliceAngle / 2)
       ctx.textAlign = 'right'
       ctx.fillStyle = '#ffffff'
-      ctx.font = `bold ${Math.min(14, Math.max(8, 200 / participants.length))}px sans-serif`
+      ctx.font = `bold ${Math.min(14, Math.max(8, 200 / list.length))}px sans-serif`
       ctx.shadowColor = '#000000'
       ctx.shadowBlur = 4
 
@@ -145,7 +145,7 @@ export default function SpinWheel({ participants, isSpinning, onSpinComplete, wi
     ctx.shadowBlur = 15
     ctx.fill()
     ctx.restore()
-  }, [participants])
+  }, [])
 
   // Initial draw
   useEffect(() => {
@@ -158,11 +158,17 @@ export default function SpinWheel({ participants, isSpinning, onSpinComplete, wi
     canvas.height = canvasSize
 
     if (!isSpinning) {
-      drawWheel(ctx, currentAngleRef.current, canvasSize)
+      drawWheel(ctx, currentAngleRef.current, canvasSize, participants)
     }
   }, [canvasSize, participants, drawWheel, isSpinning])
 
-  // Spin animation
+  // Spin animation.
+  // Only depends on `isSpinning`: the participant list is snapshotted once
+  // below. People registering mid-spin change `participants`' reference,
+  // and depending on it here would re-run this effect, cancel the
+  // in-flight animation frame in cleanup, and get stuck forever on
+  // "hasSpunRef.current" already being true (never reschedules, never
+  // calls onSpinComplete).
   useEffect(() => {
     if (!isSpinning || hasSpunRef.current || participants.length === 0) return
 
@@ -177,8 +183,10 @@ export default function SpinWheel({ participants, isSpinning, onSpinComplete, wi
     canvas.width = canvasSize
     canvas.height = canvasSize
 
-    const winnerIndex = getWinnerIndex()
-    const sliceAngle = (2 * Math.PI) / participants.length
+    // Freeze the participant list for the whole animation.
+    const spinParticipants = participants
+    const winnerIndex = getWinnerIndex(spinParticipants)
+    const sliceAngle = (2 * Math.PI) / spinParticipants.length
     const targetSliceCenter = winnerIndex * sliceAngle + sliceAngle / 2
     const targetAngle = -(Math.PI / 2) - targetSliceCenter + (2 * Math.PI * 5)
 
@@ -196,15 +204,15 @@ export default function SpinWheel({ participants, isSpinning, onSpinComplete, wi
       const currentAngle = startAngle + totalSpin * eased
       currentAngleRef.current = currentAngle
 
-      drawWheel(ctx, currentAngle, canvasSize)
+      drawWheel(ctx, currentAngle, canvasSize, spinParticipants)
 
       if (progress < 1) {
         animationRef.current = requestAnimationFrame(animate)
       } else {
         // Spin complete
         hasSpunRef.current = false
-        if (winnerIndex < participants.length) {
-          onSpinComplete(participants[winnerIndex])
+        if (winnerIndex < spinParticipants.length) {
+          onSpinComplete(spinParticipants[winnerIndex])
         }
       }
     }
@@ -216,7 +224,8 @@ export default function SpinWheel({ participants, isSpinning, onSpinComplete, wi
         cancelAnimationFrame(animationRef.current)
       }
     }
-  }, [isSpinning, participants, canvasSize, getWinnerIndex, onSpinComplete, drawWheel])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSpinning, canvasSize])
 
   return (
     <div className="relative w-full max-w-[400px] mx-auto aspect-square">
