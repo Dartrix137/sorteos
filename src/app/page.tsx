@@ -1052,6 +1052,32 @@ export default function Home() {
               </div>
             )}
           </div>
+
+          {role === "organizer" && (
+            <div className="mt-6 rounded-2xl p-6 bg-[#111127] neon-border w-full flex flex-col items-center">
+              <p className="text-[#00ff8a] font-bold text-sm mb-4 uppercase tracking-wider">
+                Código QR para Seguir Inscribiendo
+              </p>
+              <div className="bg-white p-3 rounded-xl">
+                <QRCodeSVG
+                  value={`${getBaseUrl()}/?game=${gameId}`}
+                  size={160}
+                  level="H"
+                  bgColor="#ffffff"
+                  fgColor="#0a0a1a"
+                />
+              </div>
+              <p className="text-[#8888aa] text-xs mt-3 text-center">
+                Se puede seguir escaneando antes de sortear de nuevo
+              </p>
+              <p className="text-3xl font-bold text-[#00ff8a] neon-text mt-4">
+                {participantCount}
+              </p>
+              <p className="text-[#8888aa] text-xs uppercase tracking-wider">
+                Participantes Inscritos
+              </p>
+            </div>
+          )}
         </div>
       </div>
     );
